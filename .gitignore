@@ -1,0 +1,7 @@
+.venv/
+.uv-python/
+.pytest_cache/
+.mplconfig/
+__pycache__/
+*.py[cod]
+output/
