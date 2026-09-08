@@ -28,9 +28,21 @@ UV_PYTHON_INSTALL_DIR="$PWD/.uv-python" \
 uv run golf-pose path/to/swing.jpg --output output/swing_annotated.jpg
 ```
 
-Green labels are within the deliberately broad starter targets; red labels are
-outside them. These targets are not coaching prescriptions yet—they will be
-replaced with phase- and stance-aware reference data in Phase 2.
+Green labels are within approximate starter targets; red labels are outside
+them. For the current top-of-backswing sample, the trail/right elbow target is
+80–110 degrees, centered around the commonly coached approximately 90-degree
+bend. It is not a universal target for every swing phase, handedness, or camera
+view, and should be validated against labeled swings before coaching use.
+
+## Phase 2 metrics
+
+Static analysis now also reports a spine angle, shoulder and hip rotation
+proxies, a normalized head offset proxy, and a normalized weight-shift proxy.
+These are camera-view, single-frame measurements: rotation is a 2D line tilt,
+head displacement is relative to the shoulder center, and weight shift compares
+the ankle midpoint with the hip midpoint. They are intentionally labeled as
+proxies until validated against multi-frame and 3D measurements. Low-visibility
+landmarks are reported as warnings and unavailable metrics are omitted.
 
 ## Test the math
 

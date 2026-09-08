@@ -19,11 +19,11 @@ class AngleTarget:
     high: float
 
 
-# These are intentionally broad starter ranges. Phase 2 should replace them with
-# stance- and swing-phase-specific reference data.
+# These are approximate starter ranges for a top-of-backswing image. They are
+# not yet stance-, handedness-, or swing-phase-aware reference data.
 ANGLE_TARGETS: Mapping[str, AngleTarget] = {
     "left_elbow": AngleTarget(145, 180),
-    "right_elbow": AngleTarget(145, 180),
+    "right_elbow": AngleTarget(80, 110),
     "left_knee": AngleTarget(145, 175),
     "right_knee": AngleTarget(145, 175),
 }
@@ -49,7 +49,13 @@ POSE_CONNECTIONS = (
 class PoseResult:
     angles: dict[str, float]
     visibility: dict[str, float]
+    metrics: dict[str, float]
+    warnings: tuple[str, ...]
     annotated_image: np.ndarray
+
+
+class PoseQualityError(ValueError):
+    """Raised when an image cannot provide a usable pose for analysis."""
 
 
 def calculate_angle(a: np.ndarray, b: np.ndarray, c: np.ndarray) -> float:
@@ -61,6 +67,49 @@ def calculate_angle(a: np.ndarray, b: np.ndarray, c: np.ndarray) -> float:
         raise ValueError("Cannot calculate an angle from coincident points")
     cosine = np.clip(np.dot(ba, bc) / denominator, -1.0, 1.0)
     return float(np.degrees(np.arccos(cosine)))
+
+
+def calculate_golf_metrics(points: Mapping[str, np.ndarray]) -> dict[str, float]:
+    """Calculate camera-view golf metrics from normalized landmark coordinates.
+
+    Rotation, head displacement, and weight shift are single-frame 2D proxies;
+    they are not substitutes for 3D or time-series measurements.
+    """
+    shoulder_center = (points["left_shoulder"] + points["right_shoulder"]) / 2
+    hip_center = (points["left_hip"] + points["right_hip"]) / 2
+    ankle_center = (points["left_ankle"] + points["right_ankle"]) / 2
+    torso_vector = shoulder_center - hip_center
+    torso_length = np.linalg.norm(torso_vector)
+    shoulder_width = np.linalg.norm(points["left_shoulder"] - points["right_shoulder"])
+    stance_width = np.linalg.norm(points["left_ankle"] - points["right_ankle"])
+    if torso_length == 0 or shoulder_width == 0 or stance_width == 0:
+        raise ValueError("Cannot calculate golf metrics from coincident landmarks")
+
+    vertical = np.array([0.0, -1.0])
+    spine_angle = calculate_angle(hip_center + vertical, hip_center, shoulder_center)
+
+    def horizontal_axis_angle(left: np.ndarray, right: np.ndarray) -> float:
+        axis = right - left
+        angle = float(np.degrees(np.arctan2(axis[1], axis[0])))
+        if angle >= 90:
+            angle -= 180
+        if angle < -90:
+            angle += 180
+        return angle
+
+    return {
+        "spine_angle": spine_angle,
+        "shoulder_rotation_proxy": horizontal_axis_angle(
+            points["left_shoulder"], points["right_shoulder"]
+        ),
+        "hip_rotation_proxy": horizontal_axis_angle(
+            points["left_hip"], points["right_hip"]
+        ),
+        "head_offset_proxy": float(
+            np.linalg.norm(points["nose"] - shoulder_center) / torso_length
+        ),
+        "weight_shift_proxy": float((ankle_center[0] - hip_center[0]) / stance_width),
+    }
 
 
 class PoseAnalyzer:
@@ -105,7 +154,7 @@ class PoseAnalyzer:
         rgb = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2RGB)
         detection = self._pose.detect(mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb))
         if not detection.pose_landmarks:
-            raise ValueError("No pose detected. Use a clear, full-body golf photo.")
+            raise PoseQualityError("No pose detected. Use a clear, full-body golf photo.")
 
         output = image_bgr.copy()
         points = detection.pose_landmarks[0]
@@ -119,6 +168,7 @@ class PoseAnalyzer:
         }
         angles: dict[str, float] = {}
         visibility: dict[str, float] = {}
+        warnings: list[str] = []
 
         height, width = output.shape[:2]
         for name, (first, vertex, third) in joint_specs.items():
@@ -126,6 +176,7 @@ class PoseAnalyzer:
             score = min(first_point.visibility, vertex_point.visibility, third_point.visibility)
             visibility[name] = float(score)
             if score < self.min_visibility:
+                warnings.append(f"{name} unavailable (visibility {score:.0%})")
                 continue
 
             a = np.array([first_point.x, first_point.y])
@@ -138,7 +189,39 @@ class PoseAnalyzer:
             cv2.putText(output, f"{name.replace('_', ' ')}: {angle:.0f}", location,
                         cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2, cv2.LINE_AA)
 
-        return PoseResult(angles=angles, visibility=visibility, annotated_image=output)
+        metric_names = {
+            "nose": 0,
+            "left_shoulder": LANDMARKS["LEFT_SHOULDER"],
+            "right_shoulder": LANDMARKS["RIGHT_SHOULDER"],
+            "left_hip": LANDMARKS["LEFT_HIP"],
+            "right_hip": LANDMARKS["RIGHT_HIP"],
+            "left_ankle": LANDMARKS["LEFT_ANKLE"],
+            "right_ankle": LANDMARKS["RIGHT_ANKLE"],
+        }
+        metric_points: dict[str, np.ndarray] = {}
+        missing_metrics: list[str] = []
+        for name, index in metric_names.items():
+            point = points[index]
+            if point.visibility < self.min_visibility:
+                missing_metrics.append(name)
+                continue
+            metric_points[name] = np.array([point.x, point.y])
+        metrics: dict[str, float] = {}
+        if missing_metrics:
+            warnings.append(
+                "Golf proxies unavailable; low-visibility landmarks: "
+                + ", ".join(missing_metrics)
+            )
+        else:
+            metrics = calculate_golf_metrics(metric_points)
+
+        return PoseResult(
+            angles=angles,
+            visibility=visibility,
+            metrics=metrics,
+            warnings=tuple(warnings),
+            annotated_image=output,
+        )
 
     @staticmethod
     def _angle_color(name: str, angle: float) -> tuple[int, int, int]:
