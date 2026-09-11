@@ -7,3 +7,8 @@ __pycache__/
 output/
 .DS_Store
 swing*.jpg
+*.mp4
+*.mov
+*.MOV
+*.avi
+*.m4v

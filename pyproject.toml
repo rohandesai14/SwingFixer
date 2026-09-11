@@ -12,6 +12,7 @@ dependencies = [
 
 [project.scripts]
 golf-pose = "golf_swing_pose.cli:main"
+golf-video = "golf_swing_pose.video_cli:main"
 
 [build-system]
 requires = ["hatchling>=1.25"]

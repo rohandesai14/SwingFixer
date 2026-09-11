@@ -1,7 +1,7 @@
 # Golf Swing Pose Analyzer
 
-Phase 1 detects a golfer's body pose in a single full-body image, measures elbow
-and knee angles, and writes an annotated skeleton overlay.
+The project detects a golfer's body pose in images and videos, measures golf
+swing metrics, and writes annotated outputs with machine-readable reports.
 
 ## Setup (macOS)
 
@@ -49,3 +49,27 @@ landmarks are reported as warnings and unavailable metrics are omitted.
 ```sh
 UV_CACHE_DIR=/private/tmp/golfswing-uv-cache uv run pytest
 ```
+
+## Phase 3: Analyze a video
+
+The video pipeline reads every frame, writes an annotated video, and saves one
+JSON record per frame. Frames without a detected pose are preserved in the
+output video and recorded with a warning instead of stopping the run.
+
+```sh
+uv run golf-video path/to/swing.mp4 \
+	--output-video output/swing_annotated.mp4 \
+	--output-data output/swing_metrics.json
+```
+
+For example, a local video can be analyzed with:
+
+```sh
+uv run golf-video swing_video.MOV \
+	--output-video output/swing_video_annotated.mp4 \
+	--output-data output/swing_video_metrics.json
+```
+
+The annotated MP4 can be opened with QuickTime or VLC. The JSON file contains
+one record per frame, including timestamps, detected angles, Phase 2 metrics,
+visibility values, and warnings.
