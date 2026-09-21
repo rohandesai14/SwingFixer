@@ -4,61 +4,10 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>SwingFixer | Analysis workspace</title>
-    <link rel="stylesheet" href="styles.css" />
+    <meta name="description" content="SwingFixer golf swing analysis workspace" />
   </head>
   <body>
-    <main class="shell">
-      <header class="topbar">
-        <a class="brand" href=".">
-          <span class="brand-mark">SF</span>
-          <span><strong>SwingFixer</strong><small>Motion lab</small></span>
-        </a>
-        <div class="topbar-meta"><span class="status-dot"></span><span id="report-status">Demo report loaded</span></div>
-      </header>
-
-      <section class="intro">
-        <div>
-          <p class="eyebrow">Swing analysis / 01</p>
-          <h1>Turn one swing<br /><em>into a better next one.</em></h1>
-          <p class="lede">A phase-by-phase view of your motion, grounded in the reference swings you selected.</p>
-        </div>
-        <div class="upload-area"><div class="upload-actions"><label class="upload-control"><input id="report-input" type="file" accept=".json,application/json" /><span>Load report JSON <b>+</b></span></label><label class="upload-control secondary-upload"><input id="video-input" type="file" accept="video/*,.mp4,.mov" /><span>Choose video <b>+</b></span></label><button id="analyze-button" class="analyze-button" disabled>Analyze video</button></div><small class="upload-help">Load report JSON restores a completed analysis: phases, frame metrics, comparison values, and coaching notes.</small></div>
-      </section>
-
-      <section class="summary-grid">
-        <article class="metric-card accent-card"><span class="card-label">Swing status</span><strong>Needs one adjustment</strong><span class="card-note">Weight shift is the clearest gap</span></article>
-        <article class="metric-card"><span class="card-label">Frames analyzed</span><strong id="frame-count">647</strong><span class="card-note">100% pose detection</span></article>
-        <article class="metric-card"><span class="card-label">Top of backswing</span><strong id="top-frame">06.70s</strong><span class="card-note">Frame 402</span></article>
-        <article class="metric-card"><span class="card-label">Reference set</span><strong id="reference-count">30 swings</strong><span class="card-note">Local GolfDB baseline</span></article>
-      </section>
-
-      <section class="workspace-grid">
-        <article class="panel video-panel">
-          <div class="panel-heading"><div><span class="section-kicker">Playback</span><h2>Your swing</h2></div><span class="live-chip">ANNOTATED</span></div>
-          <div class="video-stage">
-            <video id="swing-video" controls playsinline></video>
-            <div class="silhouette"><span class="head"></span><span class="body"></span><span class="club"></span></div>
-            <div class="stage-copy"><span class="stage-time" id="stage-time">06.70</span><span>Top of backswing</span></div>
-            <div class="stage-grid"></div>
-          </div>
-          <div class="player-controls"><button id="play-button" class="play-button" aria-label="Play or pause">&#9654;</button><div class="scrubber"><div id="scrubber-fill"></div><input id="frame-slider" type="range" min="0" max="646" value="402" /></div><span id="current-frame">402 / 647</span></div>
-          <div id="phase-timeline" class="phase-timeline"></div>
-        </article>
-
-        <aside class="panel coaching-panel">
-          <div class="panel-heading"><div><span class="section-kicker">Coach notes</span><h2>Start here</h2></div><span class="priority">01</span></div>
-          <div id="feedback-list" class="feedback-list"></div>
-          <button class="ghost-button" id="show-all">View all feedback <span>&rarr;</span></button>
-        </aside>
-      </section>
-
-      <section class="lower-grid">
-        <article class="panel chart-panel"><div class="panel-heading"><div><span class="section-kicker">Motion profile</span><h2>Metric trail</h2></div><select id="metric-select"><option value="right_elbow">Right elbow</option><option value="weight_shift_proxy">Weight shift</option><option value="head_offset_proxy">Head offset</option><option value="hip_rotation_proxy">Hip rotation</option></select></div><p id="chart-explanation" class="panel-help"></p><div class="chart-wrap"><svg id="metric-chart" viewBox="0 0 760 210" role="img" aria-label="Metric chart"></svg></div><div class="chart-legend"><span><i class="legend-user"></i>Your swing, frame by frame</span><span><i class="legend-reference"></i>Reference phase values</span></div></article>
-        <article class="panel compare-panel"><div class="panel-heading"><div><span class="section-kicker">Reference comparison</span><h2>Where you diverge</h2></div><span class="units">your - reference</span></div><p class="panel-help">A positive delta means your value is higher than the reference at that phase; a negative delta means it is lower.</p><div id="comparison-table" class="comparison-table"></div><p class="comparison-key"><b>Right elbow</b> is an angle in degrees. <b>Weight shift</b> is a normalized camera proxy, not a percentage of body weight.</p></article>
-      </section>
-
-      <footer><span>SwingFixer analysis workspace</span><span>Local processing / no upload required</span></footer>
-    </main>
-    <script src="app.js"></script>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

@@ -131,16 +131,41 @@ Jobs run in the background. The service automatically uses
 
 ## Run the frontend
 
-The frontend is a dependency-free browser dashboard under `frontend/`. Start
-the static server in a second terminal:
+The frontend is a React and TypeScript Vite dashboard under `frontend/`. Install
+Node.js 20 or newer, then install and start it in a second terminal:
 
 ```sh
 cd frontend
-python3 -m http.server 4173
+npm install
+npm run dev
 ```
 
-Open `http://localhost:4173`. Choose a video and select **Analyze video** to
+Open the Vite URL shown in the terminal, usually `http://localhost:5173`.
+Choose a video and select **Analyze video** to
 submit it to the API, poll the analysis job, and load the annotated result.
+
+The React entry point is `frontend/src/main.tsx`, and the dashboard is composed
+in `frontend/src/App.tsx`. The frontend package provides these scripts:
+
+```text
+npm run dev        start the Vite development server
+npm run typecheck  run strict TypeScript validation
+npm run build      create a production bundle
+npm run preview    serve the production bundle locally
+```
+
+If the API is running on its default port, start both services in separate
+terminals before using live analysis:
+
+```sh
+# Terminal 1, project root
+uv run golf-api
+
+# Terminal 2, frontend/
+npm run dev
+```
+
+The browser dashboard calls the FastAPI service at `http://localhost:8000`.
 The dashboard includes:
 
 - annotated video playback
@@ -151,6 +176,13 @@ The dashboard includes:
 
 For reopening an existing analysis without processing the video again, use
 **Load report JSON** and select a previously generated report.
+
+Run the frontend checks with:
+
+```sh
+npm run typecheck
+npm run build
+```
 
 ## Known limitations
 
