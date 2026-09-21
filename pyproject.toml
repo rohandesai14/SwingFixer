@@ -8,11 +8,16 @@ dependencies = [
     "mediapipe>=0.10.35,<0.11",
     "numpy>=1.26,<2",
     "opencv-python>=4.9,<5",
+    "fastapi>=0.115,<1",
+    "python-multipart>=0.0.9,<1",
+    "uvicorn>=0.30,<1",
 ]
 
 [project.scripts]
 golf-pose = "golf_swing_pose.cli:main"
 golf-video = "golf_swing_pose.video_cli:main"
+golf-reference = "golf_swing_pose.reference_cli:main"
+golf-api = "golf_swing_pose.api_cli:main"
 
 [build-system]
 requires = ["hatchling>=1.25"]

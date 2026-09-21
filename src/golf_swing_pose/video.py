@@ -9,6 +9,8 @@ from typing import Any
 import cv2
 
 from .analyzer import PoseAnalyzer, PoseQualityError
+from .coaching import build_coaching_feedback, phase_snapshot
+from .phase_analysis import detect_swing_phases, generate_coaching_summary
 
 
 def analyze_video(
@@ -16,6 +18,7 @@ def analyze_video(
     output_video: str | Path,
     output_data: str | Path,
     analyzer: PoseAnalyzer | Any | None = None,
+    reference_baseline: dict[str, dict[str, float]] | None = None,
 ) -> dict[str, Any]:
     """Analyze every video frame and write annotated video plus JSON metrics."""
     capture = cv2.VideoCapture(str(input_path))
@@ -89,6 +92,20 @@ def analyze_video(
         if owns_analyzer and pose_analyzer is not None:
             pose_analyzer.close()
 
+    phase_frames = []
+    for record in records:
+        if not record.get("pose_detected"):
+            continue
+        metrics = record.get("metrics", {})
+        phase_frames.append({
+            "frame": record.get("frame"),
+            "timestamp_seconds": record.get("timestamp_seconds"),
+            "right_elbow": record.get("angles", {}).get("right_elbow", 180.0),
+            "hip_rotation_proxy": metrics.get("hip_rotation_proxy", 0.0),
+            "head_offset_proxy": metrics.get("head_offset_proxy", 0.0),
+            "weight_shift_proxy": metrics.get("weight_shift_proxy", 0.0),
+        })
+
     report = {
         "input": str(input_path),
         "fps": fps,
@@ -96,6 +113,23 @@ def analyze_video(
         "height": height,
         "frame_count": len(records),
         "frames": records,
+        "phase_summary": detect_swing_phases(phase_frames),
+        "coaching_summary": generate_coaching_summary(phase_frames),
     }
+    if reference_baseline:
+        candidate_snapshot = phase_snapshot(phase_frames)
+        report["reference_baseline"] = reference_baseline
+        report["reference_comparison"] = {
+            phase: {
+                metric: candidate_snapshot.get(phase, {}).get(metric, 0.0) - value
+                for metric, value in reference_baseline.get(phase, {}).items()
+                if metric != "weight_shift"
+            }
+            for phase in reference_baseline
+        }
+        report["coaching_feedback"] = build_coaching_feedback(
+            reference_baseline,
+            candidate_snapshot,
+        )
     output_data_path.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
     return report

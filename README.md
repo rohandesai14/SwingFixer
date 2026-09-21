@@ -1,7 +1,19 @@
-# Golf Swing Pose Analyzer
+# SwingFixer
 
-The project detects a golfer's body pose in images and videos, measures golf
-swing metrics, and writes annotated outputs with machine-readable reports.
+SwingFixer analyzes golf swings with MediaPipe pose tracking, identifies rough
+swing phases, compares them with a local reference baseline, and turns the
+differences into coaching feedback. It includes a Python analysis backend, a
+FastAPI service, and a browser dashboard.
+
+## Project workflow
+
+```text
+video upload -> pose metrics -> phase detection -> reference comparison -> coaching feedback
+```
+
+The reference dataset is intentionally local. The tracked manifest at
+`refs/pro_baseline_manifest.txt` points to selected GolfDB clips, while the
+larger raw `videos_160/` directory is ignored.
 
 ## Setup (macOS)
 
@@ -44,7 +56,7 @@ the ankle midpoint with the hip midpoint. They are intentionally labeled as
 proxies until validated against multi-frame and 3D measurements. Low-visibility
 landmarks are reported as warnings and unavailable metrics are omitted.
 
-## Test the math
+## Run the tests
 
 ```sh
 UV_CACHE_DIR=/private/tmp/golfswing-uv-cache uv run pytest
@@ -73,3 +85,77 @@ uv run golf-video swing_video.MOV \
 The annotated MP4 can be opened with QuickTime or VLC. The JSON file contains
 one record per frame, including timestamps, detected angles, Phase 2 metrics,
 visibility values, and warnings.
+
+## Build a local reference baseline
+
+The selected GolfDB clips can be aggregated into a reusable phase-level
+baseline. This analyzes the manifest clips once and stores the result as JSON:
+
+```sh
+uv run golf-reference refs/pro_baseline_manifest.txt \
+	--output output/reference_baseline.json
+```
+
+Use that baseline when analyzing a candidate swing:
+
+```sh
+uv run golf-video swing_video.MOV \
+	--reference-baseline output/reference_baseline.json \
+	--output-video output/swing_video_reference_annotated.mp4 \
+	--output-data output/swing_video_reference_metrics.json
+```
+
+The report includes `reference_baseline`, `reference_comparison`, and
+`coaching_feedback` alongside the frame metrics and general coaching summary.
+
+## Run the API
+
+Start the live analysis service from the project root:
+
+```sh
+uv run golf-api
+```
+
+The API listens on `http://localhost:8000` and exposes:
+
+```text
+GET  /api/health
+POST /api/analysis
+GET  /api/analysis/{id}/status
+GET  /api/analysis/{id}/report
+GET  /api/analysis/{id}/video
+```
+
+Jobs run in the background. The service automatically uses
+`output/reference_baseline.json` when that baseline exists.
+
+## Run the frontend
+
+The frontend is a dependency-free browser dashboard under `frontend/`. Start
+the static server in a second terminal:
+
+```sh
+cd frontend
+python3 -m http.server 4173
+```
+
+Open `http://localhost:4173`. Choose a video and select **Analyze video** to
+submit it to the API, poll the analysis job, and load the annotated result.
+The dashboard includes:
+
+- annotated video playback
+- phase timeline and frame navigation
+- frame-by-frame motion profiles
+- reference values and phase deltas
+- general and reference-based coaching feedback
+
+For reopening an existing analysis without processing the video again, use
+**Load report JSON** and select a previously generated report.
+
+## Known limitations
+
+- Phase detection and metrics are heuristic 2D camera-view proxies.
+- The reference clips have varied camera setups, so comparisons are useful for
+	directional feedback rather than clinical measurement.
+- API jobs are held in memory and are intended for local use; restarting the
+	API clears the job list.

@@ -12,3 +12,8 @@ swing*.jpg
 *.MOV
 *.avi
 *.m4v
+frontend/node_modules/
+frontend/dist/
+videos_160/
+.env
+.env.*
